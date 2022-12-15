@@ -3,15 +3,14 @@
 ## What It Does
 
 This plugin adds an exchange type allowing for routing to consumers
-based on required "capabilities" provided inside a message.
+based on required "capabilities" dictated by a message. Think of it
+like the routing on your favourite build server when picking a worker.
 
 This covers the use case of passing messages to consumers based on
 a list of compatibility options; for example worker queues which
-handle different types of messages. Think of if it like job queues
-on your favourite build server picking a target worker.
-
-This is similar in concept to the features exchange which already
-exists [here](https://github.com/senseysensor/rabbitmq-x-features-exchange),
+handle different types of messages. It is similar in concept to the
+`x-features` exchange which was already created and still exists
+[here](https://github.com/senseysensor/rabbitmq-x-features-exchange),
 but some of the options and implementation are a little different.
 
 ## How It Works

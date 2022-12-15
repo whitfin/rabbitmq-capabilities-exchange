@@ -16,5 +16,4 @@
 *.lock
 .tool-versions
 .tool-versions-e
-erlang.mk
 package-lock.json
