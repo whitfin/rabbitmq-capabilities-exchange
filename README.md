@@ -36,6 +36,9 @@ be helpful to know about:
 x-capabilities-fanout: bool (true)
 ```
 
+These flags are validated at exchange creation time, and are currently not
+able to be overridden inside messages themselves.
+
 ## Installation
 
 The [RabbitMQ documentation](https://www.rabbitmq.com/installing-plugins.html)
