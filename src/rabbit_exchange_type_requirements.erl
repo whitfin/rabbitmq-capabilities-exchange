@@ -26,7 +26,7 @@
          remove_bindings/3, assert_args_equivalence/2]).
 
 -rabbit_boot_step({?MODULE,
-    [{description, "Exchange type with support for matching against required flags and properties"},
+    [{description, "Exchange type with support for matching against required properties"},
      {mfa,         {rabbit_registry, register, [exchange, <<"x-requirements">>, ?MODULE]}},
      {requires,    rabbit_registry},
      {enables,     kernel_ready}]}).
@@ -36,7 +36,7 @@
 %%-----------------------------------------------
 
 description() ->
-    [{description, <<"Exchange type with support for matching against required flags and properties">>}].
+    [{description, <<"Exchange type with support for matching against required properties">>}].
 
 route(#exchange{name = Name}, #delivery{message = #basic_message{content = Content}}) ->
     Requirements = case (Content#content.properties)#'P_basic'.headers of
