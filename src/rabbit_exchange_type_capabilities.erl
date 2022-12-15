@@ -56,13 +56,12 @@ route(#exchange{name = Name, arguments = Args},
 
     % select bindings based on fanout options
     case {parse_fanout(Fanout), length(Bindings)} of
-        {F, L} when F == true or L < 2 -> Bindings;
+        {F, L} when F == true orelse L < 2 -> Bindings;
         {_, L} ->
-            Index = crypto:rand_uniform(1, L + 1),
+            Index = rand:uniform(L + 1),
             Binding = lists:nth(Index, Bindings),
             [Binding]
-        end;
-    end
+    end.
 
 validate_binding(_X, #binding{args = Args}) ->
     case rabbit_misc:table_lookup(Args, <<"x-capabilities-fanout">>) of
