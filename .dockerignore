@@ -1,4 +1,5 @@
 *
+!.git
 !src/rabbit_exchange_type_capabilities.erl
 !erlang.mk
 !rabbitmq-components.mk
