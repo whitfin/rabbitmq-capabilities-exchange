@@ -18,4 +18,3 @@
 .tool-versions-e
 erlang.mk
 package-lock.json
-rabbitmq_delimiter_exchange.d

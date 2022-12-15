@@ -1,9 +1,9 @@
-# RabbitMQ Requirements Exchange Type
+# RabbitMQ Capabilities Exchange Type
 
 ## What It Does
 
 This plugin adds an exchange type allowing for routing to consumers
-based on "requirements" provided inside a message.
+based on required "capabilities" provided inside a message.
 
 This covers the use case of passing messages to consumers based on
 a list of compatibility options; for example worker queues which
@@ -18,17 +18,17 @@ but some of the options and implementation are a little different.
 
 It's pretty similar to the default `headers` exchange, but the roles
 are reversed. When you create a binding to the exchange you provide
-(as arguments) the requirements that you provide as a map. Then, when
-a message is published, you include headers defining the requirements
-the message demands. The message is then only routed to consumers which
-define *all* of the requirements.
+(as arguments) the capabilities that your consumer offers. Then, when
+a message is published, you include headers defining the capabilities
+the message requires. The message is then only routed to consumers which
+define *all* of the capabilities.
 
-Both in binding arguments and message headers, requirements are defined
-via the `x-requirement-*` prefix to avoid clashing with any other options
+Both in binding arguments and message headers, capabilities are defined
+via the `x-capability-*` prefix to avoid clashing with any other options
 or values which might exist. The internal matching is extremely basic, so
 don't expect it to be optimally performant, but it should be more than
 enough for the use cases it targets. To use the exchange, the type is
-`x-requirements`.
+`x-capabilities`.
 
 ## Installation
 

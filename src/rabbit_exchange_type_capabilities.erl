@@ -1,12 +1,12 @@
 %% This exchange implementation is similar to the concept of a headers
 %% exchange, except that the publisher determines the consumer the message
-%% goes to by way of "requirements" in the published message. Consumers
-%% bind to the exchange with a list of requirements they provide, and
-%% messages are routed to consumers which fit *all* of the requirements.
+%% goes to by way of "capabilities" in the published message. Consumers
+%% bind to the exchange with a list of capabilities they provide, and
+%% messages are routed to consumers which fit *all* of the capabilities.
 %%
-%% Only headers/arguments prefixed with "x-requirement-" are taken into
+%% Only headers/arguments prefixed with "x-capability-" are taken into
 %% account during matching, to avoid collision with other properties. So
-%% for example, publishing a message with header `x-requirement-foo: bar"
+%% for example, publishing a message with header `x-capability-foo: bar"
 %% will only be routed to bindings where this argument pair is provided.
 %%
 %% It is worth noting that the implementation of this exchange relies on
@@ -14,7 +14,7 @@
 %% these headers come back to this exchange unsorted, we will have to
 %% update the matching alongside the changes.
 
--module(rabbit_exchange_type_requirements).
+-module(rabbit_exchange_type_capabilities).
 -behaviour(rabbit_exchange_type).
 
 -include_lib("rabbit_common/include/rabbit.hrl").
@@ -26,8 +26,8 @@
          remove_bindings/3, assert_args_equivalence/2]).
 
 -rabbit_boot_step({?MODULE,
-    [{description, "Exchange type with support for matching against required properties"},
-     {mfa,         {rabbit_registry, register, [exchange, <<"x-requirements">>, ?MODULE]}},
+    [{description, "Exchange type with support for matching against required capabilities"},
+     {mfa,         {rabbit_registry, register, [exchange, <<"x-capabilities">>, ?MODULE]}},
      {requires,    rabbit_registry},
      {enables,     kernel_ready}]}).
 
@@ -36,15 +36,15 @@
 %%-----------------------------------------------
 
 description() ->
-    [{description, <<"Exchange type with support for matching against required properties">>}].
+    [{description, <<"Exchange type with support for matching against required capabilities">>}].
 
 route(#exchange{name = Name}, #delivery{message = #basic_message{content = Content}}) ->
-    Requirements = case (Content#content.properties)#'P_basic'.headers of
+    capabilities = case (Content#content.properties)#'P_basic'.headers of
         undefined -> [];
         H         -> rabbit_misc:sort_field_table(H)
     end,
     rabbit_router:match_bindings(Name, fun (#binding{args = Provided}) ->
-        required_match(Requirements, Provided)
+        capability_match(capabilities, Provided)
     end).
 
 serialise_events() -> false.
@@ -69,28 +69,28 @@ assert_args_equivalence(X, Args) ->
 %% Private function implementations for this exchange
 %%---------------------------------------------------
 
-% All requirements provided, all matched
-required_match([], _Provided) ->
+% All capabilities provided, all matched
+capability_match([], _Provided) ->
     true;
 
-% No provided requirements left, no match
-required_match([_|_], []) ->
+% No provided capabilities left, no match
+capability_match([_|_], []) ->
     false;
 
-% If provided key is after our required key, we can guarantee that we missed the requirement
-required_match([{<<"x-requirement-", RK/binary>>, _RT, _RV} | _], [{PK, _PT, _PV} | _])
+% If provided key is after our required key, we can guarantee that we missed the capability
+capability_match([{<<"x-capability-", RK/binary>>, _RT, _RV} | _], [{PK, _PT, _PV} | _])
     when PK < RK ->
         false;
 
-% Matching requirement, so we move onto the rest of the requirements
-required_match([{<<"x-requirement-", RK/binary>>, _, RV} | RRest], [{<<"x-requirement-", PK/binary>>, _PT, PV} | PRest])
+% Matching capability, so we move onto the rest of the capabilities
+capability_match([{<<"x-capability-", RK/binary>>, _, RV} | RRest], [{<<"x-capability-", PK/binary>>, _PT, PV} | PRest])
     when RK == PK andalso RV == PV ->
-        required_match(RRest, PRest);
+        capability_match(RRest, PRest);
 
 % We haven't yet found the header we care about, so keep going for the time being
-required_match([{<<"x-requirement-", _/binary>>, _, _} | _] = Requirements, [_ | PRest]) ->
-    required_match(Requirements, PRest);
+capability_match([{<<"x-capability-", _/binary>>, _, _} | _] = Capabilities, [_ | PRest]) ->
+    capability_match(Capabilities, PRest);
 
-% Skip any headers which aren't flagged as requirements
-required_match([_ | RRest], Provided) ->
-    required_match(RRest, Provided).
+% Skip any headers which aren't flagged as capabilities
+capability_match([_ | RRest], Provided) ->
+    capability_match(RRest, Provided).

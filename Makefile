@@ -1,5 +1,5 @@
-PROJECT = rabbitmq_requirements_exchange
-PROJECT_DESCRIPTION = RabbitMQ Requirements Exchange Type
+PROJECT = rabbitmq_capabilities_exchange
+PROJECT_DESCRIPTION = RabbitMQ Capabilities Exchange Type
 
 DEPS = rabbit_common rabbit
 DEP_PLUGINS = rabbit_common/mk/rabbitmq-plugin.mk

@@ -4,7 +4,7 @@ const should = require('should');
 let _connection;
 let _cleanupTasks = [];
 
-suite('RabbitMQ requirements Exchange', function () {
+suite('RabbitMQ capabilities Exchange', function () {
 
     suiteSetup('start connection', async function () {
         _connection = await amqp.connect(
@@ -16,37 +16,37 @@ suite('RabbitMQ requirements Exchange', function () {
         });
     });
 
-    test('creating an x-requirements exchange', async function () {
+    test('creating an x-capabilities exchange', async function () {
         let { name, channel } = await _createExchange();
     });
 
 
-    test('consumers with fulfilled requirements', async function () {
+    test('consumers with all required capabilities', async function () {
         let { name, channel } = await _createExchange();
 
         let exchange = name;
         let queue_name = _name();
         let message_bytes = Buffer.from(_name());
 
-        let requirements = {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz'
+        let capabilities = {
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz'
         };
 
         await _createQueue(channel, queue_name);
 
         await _bindQueue(channel, queue_name, exchange, {
             'something-3': 'three',
-            'x-requirement-type': 'baz',
-            'x-requirement-foo': 'bar',
+            'x-capability-type': 'baz',
+            'x-capability-foo': 'bar',
             'zomething-2': 'two',
         });
 
         await _publish(channel, exchange, message_bytes, {
             'something-1': 'one',
             'something-2': 'two',
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz',
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz',
             'zomething-1': 'one',
         });
 
@@ -55,7 +55,7 @@ suite('RabbitMQ requirements Exchange', function () {
         });
     });
 
-    test('consumers with fulfilled and bonus requirements', async function () {
+    test('consumers with all required capabilities and extras', async function () {
         let { name, channel } = await _createExchange();
 
         let exchange = name;
@@ -65,14 +65,14 @@ suite('RabbitMQ requirements Exchange', function () {
         await _createQueue(channel, queue_name);
 
         await _bindQueue(channel, queue_name, exchange, {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz',
-            'x-requirement-bonus': 'yo'
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz',
+            'x-capability-bonus': 'yo'
         });
 
         await _publish(channel, exchange, message_bytes, {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz'
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz'
         });
 
         await _consume(channel, queue_name, function validate(message) {
@@ -80,7 +80,7 @@ suite('RabbitMQ requirements Exchange', function () {
         });
     });
 
-    test('consumers with unfulfilled requirements', async function () {
+    test('consumers with missing capabilities', async function () {
         let { name, channel } = await _createExchange();
 
         let exchange = name;
@@ -90,13 +90,13 @@ suite('RabbitMQ requirements Exchange', function () {
         await _createQueue(channel, queue_name);
 
         await _bindQueue(channel, queue_name, exchange, {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'bar'
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'bar'
         });
 
         await _publish(channel, exchange, message_bytes, {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz'
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz'
         });
 
         await _consume(channel, queue_name, function validate() {
@@ -104,7 +104,7 @@ suite('RabbitMQ requirements Exchange', function () {
         }, true);
     });
 
-    test('consumers with no provided requirements', async function () {
+    test('consumers with no provided capabilities', async function () {
         let { name, channel } = await _createExchange();
 
         let exchange = name;
@@ -114,12 +114,12 @@ suite('RabbitMQ requirements Exchange', function () {
         await _createQueue(channel, queue_name);
 
         await _bindQueue(channel, queue_name, exchange, {
-            'x-requirement-foo': 'bar',
-            'x-requirement-type': 'baz'
+            'x-capability-foo': 'bar',
+            'x-capability-type': 'baz'
         });
 
         await _publish(channel, exchange, message_bytes, {
-            // no requirements
+            // no capabilities
         });
 
         await _consume(channel, queue_name, function validate(message) {
@@ -136,8 +136,8 @@ suite('RabbitMQ requirements Exchange', function () {
 
 /* Private helpers */
 
-async function _bindQueue(channel, queue, exchange, requirements) {
-    await channel.bindQueue(queue, exchange, '', requirements);
+async function _bindQueue(channel, queue, exchange, capabilities) {
+    await channel.bindQueue(queue, exchange, '', capabilities);
 }
 
 async function _createExchange() {
@@ -148,7 +148,7 @@ async function _createExchange() {
     });
 
     let name = _name();
-    let result = await channel.assertExchange(name, 'x-requirements', {});
+    let result = await channel.assertExchange(name, 'x-capabilities', {});
 
     should(result).be.an.Object();
     should(result).have.property('exchange');
@@ -191,9 +191,9 @@ async function _consume(channel, queue, validator, exit) {
     });
 }
 
-async function _publish(channel, exchange, message, requirements) {
+async function _publish(channel, exchange, message, capabilities) {
     await channel.publish(exchange, '', message, {
-        headers: requirements
+        headers: capabilities
     });
 }
 

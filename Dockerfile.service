@@ -1,7 +1,7 @@
 FROM base as build
 
-ADD . /rabbitmq-requirements-exchange
-WORKDIR /rabbitmq-requirements-exchange
+ADD . /rabbitmq-capabilities-exchange
+WORKDIR /rabbitmq-capabilities-exchange
 
 RUN make && \
     make dist
@@ -9,10 +9,10 @@ RUN make && \
 FROM rabbitmq:management
 
 COPY --from=build \
-    /rabbitmq-requirements-exchange/plugins/rabbitmq_requirements_exchange-* \
-    ./plugins/rabbitmq_requirements_exchange
+    /rabbitmq-capabilities-exchange/plugins/rabbitmq_capabilities_exchange-* \
+    ./plugins/rabbitmq_capabilities_exchange
 
 RUN rabbitmq-plugins enable --offline \
-    rabbitmq_requirements_exchange
+    rabbitmq_capabilities_exchange
 
 EXPOSE 15671 15672
