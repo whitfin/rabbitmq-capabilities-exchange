@@ -29,6 +29,13 @@ don't expect it to be optimally performant, but it should be more than
 enough for the use cases it targets. To use the exchange, the type is
 `x-capabilities`.
 
+There are a couple of options you can provide on the exchange which might
+be helpful to know about:
+
+```
+x-capabilities-fanout: bool (true)
+```
+
 ## Installation
 
 The [RabbitMQ documentation](https://www.rabbitmq.com/installing-plugins.html)

@@ -38,16 +38,40 @@
 description() ->
     [{description, <<"Exchange type with support for matching against required capabilities">>}].
 
-route(#exchange{name = Name}, #delivery{message = #basic_message{content = Content}}) ->
-    capabilities = case (Content#content.properties)#'P_basic'.headers of
+route(#exchange{name = Name, arguments = Args},
+      #delivery{message = #basic_message{content = Content}}) ->
+    % fetch required capabilities from the headers of the message itself
+    Capabilities = case (Content#content.properties)#'P_basic'.headers of
         undefined -> [];
         H         -> rabbit_misc:sort_field_table(H)
     end,
-    rabbit_router:match_bindings(Name, fun (#binding{args = Provided}) ->
-        capability_match(capabilities, Provided)
-    end).
 
-serialise_events() -> false.
+    % match all bindings based on the capabilities they provide in definition
+    Bindings = rabbit_router:match_bindings(Name, fun (#binding{args = Provided}) ->
+        capability_match(Capabilities, Provided)
+    end),
+
+    % check whether we're meant to fanout message or pick a single target
+    Fanout = rabbit_misc:table_lookup(Args, <<"x-capabilities-fanout">>),
+
+    % select bindings based on fanout options
+    case {parse_fanout(Fanout), length(Bindings)} of
+        {F, L} when F == true or L < 2 -> Bindings;
+        {_, L} ->
+            Index = crypto:rand_uniform(1, L + 1),
+            Binding = lists:nth(Index, Bindings),
+            [Binding]
+        end;
+    end
+
+validate_binding(_X, #binding{args = Args}) ->
+    case rabbit_misc:table_lookup(Args, <<"x-capabilities-fanout">>) of
+        undefined -> ok;
+        {bool, _} -> ok;
+        {Type, Other} -> {error, {binding_invalid,
+                                  "Invalid x-capabilities-fanout field type ~tp (value ~tp); "
+                                  "expected bool", [Type, Other]}}
+    end.
 
 %%----------------------------------------------------
 %% Default behaviour implementations for this exchange
@@ -56,9 +80,9 @@ serialise_events() -> false.
 info(_X) -> [].
 info(_X, _Is) -> [].
 validate(_X) -> ok.
-validate_binding(_X, _B) -> ok.
 create(_Tx, _X) -> ok.
 delete(_Tx, _X, _Bs) -> ok.
+serialise_events() -> false.
 policy_changed(_X1, _X2) -> ok.
 add_binding(_Tx, _X, _B) -> ok.
 remove_bindings(_Tx, _X, _Bs) -> ok.
@@ -94,3 +118,7 @@ capability_match([{<<"x-capability-", _/binary>>, _, _} | _] = Capabilities, [_ 
 % Skip any headers which aren't flagged as capabilities
 capability_match([_ | RRest], Provided) ->
     capability_match(RRest, Provided).
+
+% Fanout parsing matcher
+parse_fanout({bool, B}) -> B;
+parse_fanout(_) -> true.
