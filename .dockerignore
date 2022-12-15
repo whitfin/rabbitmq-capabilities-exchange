@@ -1,6 +1,6 @@
 *
 !.git
-!src/rabbit_exchange_type_delimiter.erl
+!src/rabbit_exchange_type_requirements.erl
 !erlang.mk
 !rabbitmq-components.mk
 !Makefile
