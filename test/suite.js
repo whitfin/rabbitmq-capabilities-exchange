@@ -1,10 +1,11 @@
 const amqp = require('amqplib');
 const should = require('should');
+const timers = require('timers/promises');
 
 let _connection;
 let _cleanupTasks = [];
 
-suite('RabbitMQ capabilities Exchange', function () {
+suite('RabbitMQ Capabilities Exchange', function () {
 
     suiteSetup('start connection', async function () {
         _connection = await amqp.connect(
@@ -20,111 +21,157 @@ suite('RabbitMQ capabilities Exchange', function () {
         let { name, channel } = await _createExchange();
     });
 
-
-    test('consumers with all required capabilities', async function () {
-        let { name, channel } = await _createExchange();
-
-        let exchange = name;
-        let queue_name = _name();
-        let message_bytes = Buffer.from(_name());
-
-        let capabilities = {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz'
-        };
-
-        await _createQueue(channel, queue_name);
-
-        await _bindQueue(channel, queue_name, exchange, {
-            'something-3': 'three',
-            'x-capability-type': 'baz',
-            'x-capability-foo': 'bar',
-            'zomething-2': 'two',
-        });
-
-        await _publish(channel, exchange, message_bytes, {
-            'something-1': 'one',
-            'something-2': 'two',
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz',
-            'zomething-1': 'one',
-        });
-
-        await _consume(channel, queue_name, function validate(message) {
-            should(message.content).eql(message_bytes);
-        });
+    test('routing to a single consumer with required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': false
+            },
+            {
+                'something-1': 'one',
+                'something-2': 'two',
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz',
+                'zomething-1': 'one'
+            },
+            {
+                'something-3': 'three',
+                'x-capability-type': 'baz',
+                'x-capability-foo': 'bar',
+                'zomething-2': 'two'
+            },
+            1
+        );
     });
 
-    test('consumers with all required capabilities and extras', async function () {
-        let { name, channel } = await _createExchange();
-
-        let exchange = name;
-        let queue_name = _name();
-        let message_bytes = Buffer.from(_name());
-
-        await _createQueue(channel, queue_name);
-
-        await _bindQueue(channel, queue_name, exchange, {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz',
-            'x-capability-bonus': 'yo'
-        });
-
-        await _publish(channel, exchange, message_bytes, {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz'
-        });
-
-        await _consume(channel, queue_name, function validate(message) {
-            should(message.content).eql(message_bytes);
-        });
+    test('routing to a single consumer with more than required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': false
+            },
+            {
+                'x-capability-foo': 'bar'
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            1
+        );
     });
 
-    test('consumers with missing capabilities', async function () {
-        let { name, channel } = await _createExchange();
-
-        let exchange = name;
-        let queue_name = _name();
-        let message_bytes = Buffer.from(_name());
-
-        await _createQueue(channel, queue_name);
-
-        await _bindQueue(channel, queue_name, exchange, {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'bar'
-        });
-
-        await _publish(channel, exchange, message_bytes, {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz'
-        });
-
-        await _consume(channel, queue_name, function validate() {
-            should.fail('Message should never be received!');
-        }, true);
+    test('routing to a single consumer with less than required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': false
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            {
+                'x-capability-foo': 'bar'
+            },
+            0
+        );
     });
 
-    test('consumers with no provided capabilities', async function () {
-        let { name, channel } = await _createExchange();
+    test('routing to a single consumer with no provided capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': false
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            {
+                // nothing provided!
+            },
+            0
+        );
+    });
 
-        let exchange = name;
-        let queue_name = _name();
-        let message_bytes = Buffer.from(_name());
+    test('routing to multiple consumers with required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': true
+            },
+            {
+                'something-1': 'one',
+                'something-2': 'two',
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz',
+                'zomething-1': 'one'
+            },
+            {
+                'something-3': 'three',
+                'x-capability-type': 'baz',
+                'x-capability-foo': 'bar',
+                'zomething-2': 'two'
+            },
+            2
+        );
+    });
 
-        await _createQueue(channel, queue_name);
+    test('routing to multiple consumers with more than required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': true
+            },
+            {
+                'x-capability-foo': 'bar'
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            2
+        );
+    });
 
-        await _bindQueue(channel, queue_name, exchange, {
-            'x-capability-foo': 'bar',
-            'x-capability-type': 'baz'
-        });
+    test('routing to multiple consumers with less than required capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': true
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            {
+                'x-capability-foo': 'bar'
+            },
+            0
+        );
+    });
 
-        await _publish(channel, exchange, message_bytes, {
-            // no capabilities
-        });
+    test('routing to multiple consumers with no provided capabilities', async function () {
+        return _testMessageRouting(
+            {
+                'x-capabilities-fanout': true
+            },
+            {
+                'x-capability-foo': 'bar',
+                'x-capability-type': 'baz'
+            },
+            {
+                // nothing provided!
+            },
+            0
+        );
+    });
 
-        await _consume(channel, queue_name, function validate(message) {
-            should(message.content).eql(message_bytes);
-        });
+    test('routing to multiple consumers by default', async function () {
+        return _testMessageRouting(
+            { },
+            {
+                'x-capability-foo': 'bar'
+            },
+            {
+                'x-capability-foo': 'bar'
+            },
+            2
+        );
     });
 
     suiteTeardown('close connection', async function () {
@@ -140,7 +187,7 @@ async function _bindQueue(channel, queue, exchange, capabilities) {
     await channel.bindQueue(queue, exchange, '', capabilities);
 }
 
-async function _createExchange() {
+async function _createExchange(args) {
     let channel = await _connection.createChannel();
 
     _scheduleForCleanup(async function () {
@@ -148,7 +195,9 @@ async function _createExchange() {
     });
 
     let name = _name();
-    let result = await channel.assertExchange(name, 'x-capabilities', {});
+    let result = await channel.assertExchange(name, 'x-capabilities', {
+        arguments: args
+    });
 
     should(result).be.an.Object();
     should(result).have.property('exchange');
@@ -191,16 +240,38 @@ async function _consume(channel, queue, validator, exit) {
     });
 }
 
-async function _publish(channel, exchange, message, capabilities) {
-    await channel.publish(exchange, '', message, {
-        headers: capabilities
-    });
-}
-
 function _name() {
     return Math.random().toString(36).substring(7);
 }
 
 function _scheduleForCleanup(task) {
     _cleanupTasks.unshift(task);
+}
+
+async function _testMessageRouting(args, required, provided, expected) {
+    let { name, channel } = await _createExchange(args);
+
+    let exchange = name;
+    let message_bytes = Buffer.from(_name());
+    let received_messages = 0;
+
+    async function _listen(queue) {
+        await _createQueue(channel, queue);
+        await _bindQueue(channel, queue, exchange, provided);
+        _consume(channel, queue, function (message) {
+            should(message.content).eql(message_bytes);
+            received_messages += 1;
+        });
+    };
+
+    await _listen(_name());
+    await _listen(_name());
+
+    await channel.publish(exchange, '', message_bytes, {
+        headers: required
+    });
+
+    await timers.setTimeout(500);
+
+    should(received_messages).eql(expected);
 }

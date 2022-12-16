@@ -33,6 +33,10 @@ There are a couple of options you can provide on the exchange which might
 be helpful to know about:
 
 ```
+# Controls whether messages fanout to all consumers or not.
+#
+# This defaults to true (will fanout), but setting it to false will select
+# a random consumer from the matched bindings and pass through to only that.
 x-capabilities-fanout: bool (true)
 ```
 

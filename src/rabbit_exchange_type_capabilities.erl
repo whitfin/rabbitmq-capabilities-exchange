@@ -58,7 +58,7 @@ route(#exchange{name = Name, arguments = Args},
     case {parse_fanout(Fanout), length(Bindings)} of
         {F, L} when F == true orelse L < 2 -> Bindings;
         {_, L} ->
-            Index = rand:uniform(L + 1),
+            Index = rand:uniform(L),
             Binding = lists:nth(Index, Bindings),
             [Binding]
     end.
